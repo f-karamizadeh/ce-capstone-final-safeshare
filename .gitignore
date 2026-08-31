@@ -1,0 +1,11 @@
+myway.md
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+crash.log
+
+# Node
+node_modules/
+.env
