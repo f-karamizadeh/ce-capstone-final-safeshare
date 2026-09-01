@@ -1,10 +1,19 @@
-# Root Main - مرحله 3 + 4 + 5
+# Root Main - مرحله 3+4+5+6
 
 module "networking" {
   source = "./modules/networking"
 
   project_name = var.project_name
   vpc_cidr     = var.vpc_cidr
+}
+
+module "alb" {
+  source = "./modules/networking/alb"
+
+  project_name      = var.project_name
+  environment       = var.environment
+  vpc_id            = module.networking.vpc_id
+  public_subnet_ids = module.networking.public_subnet_ids
 }
 
 module "s3" {
