@@ -1,4 +1,4 @@
-# Root Main - مرحله 3+4+5+6+7
+# Root Main - Full Stack
 
 module "networking" {
   source = "./modules/networking"
@@ -49,4 +49,23 @@ module "ecs" {
   db_name                = module.rds.db_name
   db_password_secret_arn = var.db_password_secret_arn
   aws_region             = var.aws_region
+}
+
+module "lambda_eventbridge" {
+  source = "./modules/lambda-eventbridge"
+
+  project_name   = var.project_name
+  environment    = var.environment
+  s3_bucket_name = module.s3.s3_bucket_name
+  s3_bucket_arn  = module.s3.s3_bucket_arn
+}
+
+module "monitoring" {
+  source = "./modules/monitoring"
+
+  project_name     = var.project_name
+  environment      = var.environment
+  aws_region       = var.aws_region
+  alb_arn_suffix   = module.alb.alb_arn_suffix
+  ecs_cluster_name = module.ecs.ecs_cluster_name
 }

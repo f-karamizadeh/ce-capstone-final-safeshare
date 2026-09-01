@@ -14,6 +14,10 @@ output "alb_arn" {
   value = aws_lb.main.arn
 }
 
+output "alb_arn_suffix" {
+  value = aws_lb.main.arn_suffix
+}
+
 output "alb_listener_arn" {
   value = aws_lb_listener.http.arn
 }
