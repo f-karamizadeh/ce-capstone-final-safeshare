@@ -1,7 +1,19 @@
 data "archive_file" "lambda" {
   type        = "zip"
-  source_file = "${path.module}/lambda.py"
   output_path = "${path.module}/lambda.zip"
+
+  source {
+    content  = <<-PY
+import os
+import boto3
+
+def handler(event, context):
+    bucket = os.environ.get('S3_BUCKET', 'unknown')
+    print(f"Checking bucket {bucket} for expired files...")
+    return {"status": "cleanup done", "bucket": bucket}
+PY
+    filename = "index.py"
+  }
 }
 
 resource "aws_iam_role" "lambda" {
@@ -33,11 +45,6 @@ resource "aws_iam_role_policy" "lambda_s3_rds" {
         Effect   = "Allow"
         Action   = ["s3:ListBucket", "s3:DeleteObject", "s3:GetObject"]
         Resource = [var.s3_bucket_arn, "${var.s3_bucket_arn}/*"]
-      },
-      {
-        Effect   = "Allow"
-        Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "*"
       }
     ]
   })
