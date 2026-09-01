@@ -1,3 +1,9 @@
+data "archive_file" "lambda" {
+  type        = "zip"
+  source_file = "${path.module}/lambda.py"
+  output_path = "${path.module}/lambda.zip"
+}
+
 resource "aws_iam_role" "lambda" {
   name = "${var.project_name}-${var.environment}-lambda-role"
 
@@ -38,14 +44,13 @@ resource "aws_iam_role_policy" "lambda_s3_rds" {
 }
 
 resource "aws_lambda_function" "cleanup" {
-  function_name = "${var.project_name}-${var.environment}-cleanup"
-  role          = aws_iam_role.lambda.arn
-  handler       = "index.handler"
-  runtime       = "python3.11"
-  timeout       = 60
-
-  filename         = "${path.module}/lambda.zip"
-  source_code_hash = filebase64sha256("${path.module}/lambda.zip")
+  function_name    = "${var.project_name}-${var.environment}-cleanup"
+  role             = aws_iam_role.lambda.arn
+  handler          = "index.handler"
+  runtime          = "python3.11"
+  timeout          = 60
+  filename         = data.archive_file.lambda.output_path
+  source_code_hash = data.archive_file.lambda.output_base64sha256
 
   environment {
     variables = {
