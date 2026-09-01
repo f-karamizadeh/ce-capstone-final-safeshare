@@ -9,3 +9,7 @@ output "public_subnets" {
 output "private_subnets" {
   value = module.networking.private_subnet_ids
 }
+
+output "s3_bucket_name" {
+  value = module.s3.s3_bucket_name
+}
