@@ -24,10 +24,8 @@ resource "aws_internet_gateway" "main" {
   }
 }
 
-# Public Subnets - برای ALB
 resource "aws_subnet" "public" {
-  count = 2
-
+  count                   = 2
   vpc_id                  = aws_vpc.main.id
   cidr_block              = cidrsubnet(var.vpc_cidr, 8, count.index)
   availability_zone       = local.azs[count.index]
@@ -39,10 +37,8 @@ resource "aws_subnet" "public" {
   }
 }
 
-# Private Subnets - برای ECS و RDS - امنیت
 resource "aws_subnet" "private" {
-  count = 2
-
+  count             = 2
   vpc_id            = aws_vpc.main.id
   cidr_block        = cidrsubnet(var.vpc_cidr, 8, count.index + 10)
   availability_zone = local.azs[count.index]
@@ -53,9 +49,9 @@ resource "aws_subnet" "private" {
   }
 }
 
-# NAT Gateway - FinOps: فقط 1  میسازیم نه 2 تا (ماهانه 32$ صرفه جویی)
 resource "aws_eip" "nat" {
   domain = "vpc"
+
   tags = {
     Name = "${var.project_name}-nat-eip"
   }
@@ -72,7 +68,6 @@ resource "aws_nat_gateway" "main" {
   depends_on = [aws_internet_gateway.main]
 }
 
-# Route Tables
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
 
@@ -100,59 +95,13 @@ resource "aws_route_table" "private" {
 }
 
 resource "aws_route_table_association" "public" {
-  count = 2
+  count          = 2
   subnet_id      = aws_subnet.public[count.index].id
   route_table_id = aws_route_table.public.id
 }
 
 resource "aws_route_table_association" "private" {
-  count = 2
+  count          = 2
   subnet_id      = aws_subnet.private[count.index].id
   route_table_id = aws_route_table.private.id
-}
-
-# Flow Logs برای امنیت 
-resource "aws_flow_log" "vpc_flow_log" {
-  iam_role_arn    = aws_iam_role.flow_log.arn
-  log_destination = aws_cloudwatch_log_group.vpc_flow_log.arn
-  traffic_type    = "ALL"
-  vpc_id          = aws_vpc.main.id
-}
-
-resource "aws_cloudwatch_log_group" "vpc_flow_log" {
-  name              = "/vpc/${var.project_name}-flow-logs"
-  retention_in_days = 7
-}
-
-resource "aws_iam_role" "flow_log" {
-  name = "${var.project_name}-flow-log-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Action    = "sts:AssumeRole"
-      Effect    = "Allow"
-      Principal = { Service = "vpc-flow-logs.amazonaws.com" }
-    }]
-  })
-}
-
-resource "aws_iam_role_policy" "flow_log" {
-  name = "${var.project_name}-flow-log-policy"
-  role = aws_iam_role.flow_log.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Action = [
-        "logs:CreateLogGroup",
-        "logs:CreateLogStream",
-        "logs:PutLogEvents",
-        "logs:DescribeLogGroups",
-        "logs:DescribeLogStreams"
-      ]
-      Effect   = "Allow"
-      Resource = "*"
-    }]
-  })
 }
