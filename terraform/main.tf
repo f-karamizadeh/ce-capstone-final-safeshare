@@ -1,4 +1,4 @@
-# Root Main - مرحله 3 + 4
+# Root Main - مرحله 3 + 4 + 5
 
 module "networking" {
   source = "./modules/networking"
@@ -12,4 +12,15 @@ module "s3" {
 
   project_name = var.project_name
   environment  = var.environment
+}
+
+module "rds" {
+  source = "./modules/rds"
+
+  project_name       = var.project_name
+  environment        = var.environment
+  vpc_id             = module.networking.vpc_id
+  vpc_cidr           = var.vpc_cidr
+  private_subnet_ids = module.networking.private_subnet_ids
+  db_password        = var.db_password
 }
