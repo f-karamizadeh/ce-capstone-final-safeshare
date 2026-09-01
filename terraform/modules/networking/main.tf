@@ -1,4 +1,3 @@
-
 data "aws_availability_zones" "available" {
   state = "available"
 }
@@ -112,7 +111,7 @@ resource "aws_route_table_association" "private" {
   route_table_id = aws_route_table.private.id
 }
 
-# Flow Logs برای امنیت (نمره اضافی)
+# Flow Logs برای امنیت 
 resource "aws_flow_log" "vpc_flow_log" {
   iam_role_arn    = aws_iam_role.flow_log.arn
   log_destination = aws_cloudwatch_log_group.vpc_flow_log.arn
