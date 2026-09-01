@@ -53,7 +53,7 @@ resource "aws_subnet" "private" {
   }
 }
 
-# NAT Gateway - FinOps: فقط 1 تا میسازیم نه 2 تا (ماهانه 32$ صرفه جویی)
+# NAT Gateway - FinOps: فقط 1  میسازیم نه 2 تا (ماهانه 32$ صرفه جویی)
 resource "aws_eip" "nat" {
   domain = "vpc"
   tags = {
