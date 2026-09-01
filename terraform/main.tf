@@ -8,7 +8,7 @@ module "networking" {
 }
 
 module "alb" {
-  source = "./modules/networking/alb"
+  source = "./modules/alb"
 
   project_name      = var.project_name
   environment       = var.environment
