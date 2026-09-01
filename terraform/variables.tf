@@ -17,3 +17,13 @@ variable "db_password" {
   type      = string
   sensitive = true
 }
+
+variable "db_password_secret_arn" {
+  type    = string
+  default = ""
+}
+
+variable "aws_region" {
+  type    = string
+  default = "us-east-1"
+}

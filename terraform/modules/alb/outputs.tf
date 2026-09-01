@@ -13,3 +13,7 @@ output "target_group_arn" {
 output "alb_arn" {
   value = aws_lb.main.arn
 }
+
+output "alb_listener_arn" {
+  value = aws_lb_listener.http.arn
+}
