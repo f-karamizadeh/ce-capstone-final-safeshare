@@ -9,7 +9,7 @@ data "aws_ami" "al2023" {
 
 resource "aws_instance" "bastion" {
   ami = data.aws_ami.al2023.id
-  instance_type = "t2.micro"
+  instance_type = "t3.micro"
   subnet_id = module.vpc.public_subnet_ids[0]
   vpc_security_group_ids = [module.security.bastion_sg_id]
   associate_public_ip_address = true
