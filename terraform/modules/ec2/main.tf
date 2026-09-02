@@ -1,4 +1,5 @@
-variable "private_subnet_ids" {}
+variable "private_subnet_ids" { type = list(string) }
+variable "public_subnet_ids" { type = list(string) }
 variable "ec2_sg_id" {}
 variable "target_group_arn" {}
 
@@ -11,11 +12,38 @@ data "aws_ami" "amazon_linux" {
   }
 }
 
+# --- IAM for SSM ---
+resource "aws_iam_role" "ec2_ssm" {
+  name = "safeshare-ec2-ssm-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = { Service = "ec2.amazonaws.com" }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ssm" {
+  role       = aws_iam_role.ec2_ssm.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_instance_profile" "ec2" {
+  name = "safeshare-ec2-profile"
+  role = aws_iam_role.ec2_ssm.name
+}
+
 resource "aws_launch_template" "main" {
   name_prefix            = "safeshare-flask-"
   image_id               = data.aws_ami.amazon_linux.id
   instance_type          = "t3.micro"
   vpc_security_group_ids = [var.ec2_sg_id]
+
+  iam_instance_profile {
+    name = aws_iam_instance_profile.ec2.name
+  }
 
   user_data = base64encode(<<-EOF
     #!/bin/bash
