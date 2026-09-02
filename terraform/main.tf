@@ -29,7 +29,6 @@ module "alb" {
 module "ec2" {
   source             = "./modules/ec2"
   private_subnet_ids = module.vpc.private_subnet_ids
-  public_subnet_ids  = module.vpc.public_subnet_ids
   ec2_sg_id          = module.security.ec2_sg_id
   target_group_arn   = module.alb.target_group_arn
 }
