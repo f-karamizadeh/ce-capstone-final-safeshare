@@ -1,0 +1,7 @@
+{
+  "widgets": [
+    { "type": "metric", "properties": { "metrics": [["AWS/ApplicationELB", "RequestCount"]], "title": "Requests" } },
+    { "type": "metric", "properties": { "metrics": [["CWAgent", "mem_used_percent"]], "title": "RAM Usage" } },
+    { "type": "metric", "properties": { "metrics": [["SafeShare/Business", "UploadCount"]], "title": "Business Uploads" } }
+  ]
+}

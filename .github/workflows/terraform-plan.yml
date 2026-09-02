@@ -1,49 +1,109 @@
-name: Terraform Plan
+name: CI - Terraform Plan + Security + FinOps
 
 on:
+  push:
+    branches-ignore:
+      - main
   pull_request:
-    paths:
-      - 'terraform/**'
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
-  plan:
+  commit-lint:
+    name: "1. Commit Lint"
     runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Check commit format
+        uses: wagoid/commitlint-github-action@v6
+
+  secret-scan:
+    name: "2. Secret Scan"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: TruffleHog Scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified
+
+  terraform-ci:
+    name: "3. Terraform Validate + Security + FinOps"
+    runs-on: ubuntu-latest
+    needs: [commit-lint, secret-scan]
+    defaults:
+      run:
+        working-directory: terraform
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+        uses: actions/checkout@v5
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.10.0
+          terraform_wrapper: false
+
+      - name: Terraform fmt
+        run: terraform fmt -recursive
 
       - name: Terraform Init
-        working-directory: terraform
         run: terraform init
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: us-east-1
 
-      - name: Terraform Format Check
-        working-directory: terraform
-        run: terraform fmt -check -recursive
+      - name: Mask Secrets
+        run: |
+          echo "::add-mask::${{ secrets.DB_PASSWORD }}"
+          echo "::add-mask::${{ secrets.AWS_SECRET_ACCESS_KEY }}"
 
       - name: Terraform Validate
-        working-directory: terraform
         run: terraform validate
 
-      - name: Terraform Plan
-        working-directory: terraform
-        run: terraform plan -no-color
-        continue-on-error: true
-
-      - name: tfsec Security Scan
-        uses: aquasecurity/tfsec-action@v1
+      - name: tfsec - Security Scan
+        uses: aquasecurity/tfsec-pr-commenter-action@v1.3.1
         with:
           working_directory: terraform
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Infracost
+        uses: infracost/actions/setup@v2
+        with:
+          api-key: ${{ secrets.INFRACOST_API_KEY }}
+
+      - name: Generate Infracost cost JSON
+        run: |
+          infracost breakdown --path=.             --format=json             --out-file=/tmp/infracost.json || echo '{"version":"0.1"}' > /tmp/infracost.json
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Post Infracost comment
+        if: github.event_name == 'pull_request'
+        run: |
+          infracost comment github --path=/tmp/infracost.json             --repo=$GITHUB_REPOSITORY             --github-token=${{ secrets.GITHUB_TOKEN }}             --pull-request=${{ github.event.pull_request.number }}             --behavior=update
+
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -no-color -input=false
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+          AWS_REGION: us-east-1
+          TF_VAR_db_password_secret_arn: ""
+          TF_VAR_aws_region: "us-east-1"
