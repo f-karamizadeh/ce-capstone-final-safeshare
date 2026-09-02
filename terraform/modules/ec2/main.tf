@@ -12,9 +12,9 @@ data "aws_ami" "amazon_linux" {
 }
 
 resource "aws_launch_template" "main" {
-  name_prefix   = "safeshare-flask-"
-  image_id      = data.aws_ami.amazon_linux.id
-  instance_type = "t3.micro"
+  name_prefix            = "safeshare-flask-"
+  image_id               = data.aws_ami.amazon_linux.id
+  instance_type          = "t3.micro"
   vpc_security_group_ids = [var.ec2_sg_id]
 
   user_data = base64encode(<<-EOF
@@ -46,13 +46,13 @@ PY
 }
 
 resource "aws_autoscaling_group" "main" {
-  desired_capacity = 2
-  min_size         = 2
-  max_size         = 3
+  desired_capacity    = 2
+  min_size            = 2
+  max_size            = 3
   vpc_zone_identifier = var.private_subnet_ids
   target_group_arns   = [var.target_group_arn]
   launch_template {
-     id = aws_launch_template.main.id
-      version = "$Latest"
-       }
+    id      = aws_launch_template.main.id
+    version = "$Latest"
+  }
 }
