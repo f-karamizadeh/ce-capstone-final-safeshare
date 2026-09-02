@@ -9,4 +9,11 @@ terraform {
 }
 provider "aws" {
   region = "us-east-1"
+  default_tags {
+    tags = {
+      Project     = "SafeShare"
+      Owner       = "farama"
+      Environment = var.environment
+    }
+  }
 }

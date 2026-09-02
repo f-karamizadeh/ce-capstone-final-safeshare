@@ -1,19 +1,17 @@
-variable "project_name" {
-  type = string
-}
-
 variable "environment" {
+  type    = string
+  default = "dev"
+}
+
+variable "cert_arn" {
   type = string
 }
 
-variable "aws_region" {
+variable "sns_email" {
   type = string
 }
 
-variable "alb_arn_suffix" {
-  type = string
-}
-
-variable "ecs_cluster_name" {
-  type = string
+variable "region" {
+  type    = string
+  default = "us-east-1"
 }
