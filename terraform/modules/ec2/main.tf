@@ -38,6 +38,7 @@ resource "aws_launch_template" "main" {
   name_prefix            = "safeshare-flask-"
   image_id               = data.aws_ami.amazon_linux.id
   instance_type          = "t3.micro"
+  key_name = "3tier"
   vpc_security_group_ids = [var.ec2_sg_id]
 
   iam_instance_profile {
