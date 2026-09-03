@@ -47,28 +47,82 @@ resource "aws_launch_template" "main" {
 
   user_data = base64encode(<<-EOF
     #!/bin/bash
+    set -x
+    dnf update -y
     dnf install -y python3-pip
-    pip3 install flask requests
+    pip3 install flask werkzeug --break-system-packages || pip3 install flask
+
+    mkdir -p /home/ec2-user/uploads
+    chmod 777 /home/ec2-user/uploads
+
     cat > /home/ec2-user/app.py << 'PY'
-from flask import Flask, jsonify
-import requests
+from flask import Flask, request, send_from_directory, render_template_string
+import os
+
 app = Flask(__name__)
-def get_meta(path):
-    try:
-        r = requests.get(f"http://169.254.169.254/latest/meta-data/{path}", timeout=1)
-        return r.text
-    except:
-        return "local"
+UPLOAD_FOLDER = '/home/ec2-user/uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+HTML = """
+<!doctype html>
+<title>SafeShare - 3Tier</title>
+<h2>SafeShare File Upload / Download</h2>
+<form method=post enctype=multipart/form-data action="/upload">
+  <input type=file name=file>
+  <input type=submit value=Upload>
+</form>
+<hr>
+<h3>Files:</h3>
+<ul>
+{% for f in files %}
+  <li><a href="/download/{{f}}">{{f}}</a></li>
+{% endfor %}
+</ul>
+<p>Health: <a href="/health">/health</a></p>
+"""
+
 @app.route("/")
 def index():
-    return jsonify({"instance_id": get_meta("instance-id"), "az": get_meta("placement/availability-zone"), "health": "healthy"})
+    files = os.listdir(UPLOAD_FOLDER)
+    return render_template_string(HTML, files=files)
+
 @app.route("/health")
 def health():
-    return jsonify(status="ok"), 200
+    return "ok", 200
+
+@app.route("/upload", methods=["POST"])
+def upload():
+    f = request.files.get('file')
+    if f:
+        f.save(os.path.join(UPLOAD_FOLDER, f.filename))
+    return index()
+
+@app.route("/download/<name>")
+def download(name):
+    return send_from_directory(UPLOAD_FOLDER, name, as_attachment=True)
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
 PY
-    nohup python3 /home/ec2-user/app.py > /var/log/flask.log 2>&1 &
+
+    cat > /etc/systemd/system/flask.service << 'SVC'
+[Unit]
+Description=SafeShare Flask
+After=network.target
+
+[Service]
+User=ec2-user
+WorkingDirectory=/home/ec2-user
+ExecStart=/usr/bin/python3 /home/ec2-user/app.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+SVC
+
+    systemctl daemon-reload
+    systemctl enable flask
+    systemctl restart flask
   EOF
   )
 }
