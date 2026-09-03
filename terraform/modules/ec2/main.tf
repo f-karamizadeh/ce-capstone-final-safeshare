@@ -45,20 +45,18 @@ resource "aws_launch_template" "main" {
     name = aws_iam_instance_profile.ec2.name
   }
 
-  user_data = base64encode(<<-EOF
-    #!/bin/bash
-    set -x
-    dnf update -y
-    dnf install -y python3-pip
-    pip3 install flask werkzeug --break-system-packages || pip3 install flask
+    user_data = base64encode(<<-EOF
+#!/bin/bash
+set -x
+dnf update -y
+dnf install -y python3-pip
+pip3 install flask --break-system-packages || pip3 install flask
+mkdir -p /home/ec2-user/uploads
+chmod 777 /home/ec2-user/uploads
 
-    mkdir -p /home/ec2-user/uploads
-    chmod 777 /home/ec2-user/uploads
-
-    cat > /home/ec2-user/app.py << 'PY'
+cat > /home/ec2-user/app.py <<'PY'
 from flask import Flask, request, send_from_directory, render_template_string
 import os
-
 app = Flask(__name__)
 UPLOAD_FOLDER = '/home/ec2-user/uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -75,7 +73,7 @@ HTML = """
 <h3>Files:</h3>
 <ul>
 {% for f in files %}
-  <li><a href="/download/{{f}}">{{f}}</a></li>
+  <li><a href="/download/{{f}}">{{f}}</a> - {{f}}</li>
 {% endfor %}
 </ul>
 <p>Health: <a href="/health">/health</a></p>
@@ -93,7 +91,7 @@ def health():
 @app.route("/upload", methods=["POST"])
 def upload():
     f = request.files.get('file')
-    if f:
+    if f and f.filename:
         f.save(os.path.join(UPLOAD_FOLDER, f.filename))
     return index()
 
@@ -105,25 +103,23 @@ if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
 PY
 
-    cat > /etc/systemd/system/flask.service << 'SVC'
+cat > /etc/systemd/system/flask.service <<'SVC'
 [Unit]
 Description=SafeShare Flask
 After=network.target
-
 [Service]
 User=ec2-user
 WorkingDirectory=/home/ec2-user
 ExecStart=/usr/bin/python3 /home/ec2-user/app.py
 Restart=always
-
 [Install]
 WantedBy=multi-user.target
 SVC
 
-    systemctl daemon-reload
-    systemctl enable flask
-    systemctl restart flask
-  EOF
+systemctl daemon-reload
+systemctl enable flask
+systemctl restart flask
+EOF
   )
 }
 
