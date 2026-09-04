@@ -1,0 +1,38 @@
+- name: SafeShare sync to S3
+  hosts: safeshare
+  become: yes
+  vars:
+    bucket_name: "safeshare-files-chemnitz-99"
+    upload_path: "/home/ec2-user/uploads"
+
+  tasks:
+    - name: install awscli
+      dnf:
+        name: awscli
+        state: present
+
+    - name: create sync script
+      copy:
+        dest: /usr/local/bin/sync-to-s3.sh
+        mode: '0755'
+        content: |
+          #!/bin/bash
+          set -x
+          BUCKET="safeshare-files-chemnitz-99"
+          DIR="/home/ec2-user/uploads"
+          LOG="/var/log/s3-sync.log"
+          echo "--- $(date) ---" >> $LOG
+          /usr/bin/aws s3 sync $DIR s3://$BUCKET/ --delete >> $LOG 2>&1
+          /usr/bin/aws s3 sync s3://$BUCKET/ $DIR >> $LOG 2>&1
+          chmod -R 777 $DIR 2>> $LOG
+          chown -R ec2-user:ec2-user $DIR 2>> $LOG
+
+    - name: cron every 1 min
+      cron:
+        name: "sync uploads to s3"
+        minute: "*/1"
+        job: "/usr/local/bin/sync-to-s3.sh"
+        user: root
+
+    - name: run sync now first time
+      command: /usr/local/bin/sync-to-s3.sh

@@ -3,7 +3,7 @@ Author; Faramarz Karamizadeh  Sep.2026
 
 # SafeShare - Multi-AZ Fault Tolerant System
 
-Student: Farama - Chemnitz University
+
 
 ## 1. Architecture
 - 3 AZs: eu-central-1a,b,c
