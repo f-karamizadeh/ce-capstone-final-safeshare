@@ -31,7 +31,7 @@ flowchart TB
 
 ## Visual Diagram
 
-![Architecture Light](safeshare_3tier_architecture_light.png)
+![Architecture Light](./presentation/safeshare_3tier_architecture.jpg)
 
 ## Data Flow
 ```
